@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sessions  Session[]
+  agents    Agent[]
+  flows     Flow[]
+
+  @@map("users")
+}
+
+model Agent {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   // "basic", "coral", "solana", "custom"
+  config      Json     // Agent configuration
+  status      String   @default("inactive") // "active", "inactive", "error"
+  version     String   @default("1.0.0")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions    Session[]
+  flowNodes   FlowNode[]
+
+  @@map("agents")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  name      String?
+  status    String   @default("active") // "active", "completed", "error", "paused"
+  config    Json?    // Session configuration
+  metadata  Json?    // Additional session data
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  endedAt   DateTime?
+
+  // Relations
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  events    Event[]
+
+  @@map("sessions")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  role      String   // "user", "agent", "system"
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  type      String   // "agent_started", "agent_stopped", "error", "custom"
+  data      Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  sessionId String
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+model Flow {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  config      Json     // Flow configuration
+  status      String   @default("draft") // "draft", "published", "archived"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodes       FlowNode[]
+
+  @@map("flows")
+}
+
+model FlowNode {
+  id        String   @id @default(cuid())
+  type      String   // "agent", "condition", "action", "input", "output"
+  config    Json     // Node configuration
+  position  Json     // { x: number, y: number }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  flowId    String
+  flow      Flow     @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  agentId   String?
+  agent     Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@map("flow_nodes")
+}

@@ -1,0 +1,58 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/ui/*": ["./packages/ui/*"],
+      "@/types/*": ["./packages/types/*"],
+      "@/utils/*": ["./packages/utils/*"],
+      "@/coral-client/*": ["./packages/coral-client/*"],
+      "@/solana-client/*": ["./packages/solana-client/*"],
+      "@/agent-sdk/*": ["./packages/agent-sdk/*"]
+    }
+  },
+  "include": [
+    "apps/**/*",
+    "packages/**/*",
+    "agents/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ],
+  "references": [
+    {
+      "path": "./packages/types"
+    },
+    {
+      "path": "./packages/utils"
+    },
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./packages/coral-client"
+    },
+    {
+      "path": "./packages/solana-client"
+    },
+    {
+      "path": "./packages/agent-sdk"
+    }
+  ]
+}

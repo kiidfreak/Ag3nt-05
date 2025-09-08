@@ -1,0 +1,30 @@
+{
+  "name": "@agent-labs/agent-sdk",
+  "version": "0.1.0",
+  "description": "Agent development SDK for Agent Labs OS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@agent-labs/types": "workspace:*",
+    "@agent-labs/utils": "workspace:*",
+    "@agent-labs/coral-client": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "sdk",
+    "agent",
+    "development",
+    "agent-labs"
+  ],
+  "author": "Agent Labs Team",
+  "license": "MIT"
+}

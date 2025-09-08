@@ -1,0 +1,83 @@
+{
+  "name": "basic-agent",
+  "version": "1.0.0",
+  "description": "A basic agent template for Agent Labs OS",
+  "author": "Agent Labs Team",
+  "license": "MIT",
+  "capabilities": [
+    "message-processing",
+    "data-transformation"
+  ],
+  "inputs": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string",
+        "description": "Input message to process"
+      },
+      "options": {
+        "type": "object",
+        "description": "Processing options",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": ["json", "text", "xml"],
+            "default": "json"
+          }
+        }
+      }
+    },
+    "required": ["message"]
+  },
+  "outputs": {
+    "type": "object",
+    "properties": {
+      "result": {
+        "type": "string",
+        "description": "Processed result"
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Processing metadata",
+        "properties": {
+          "processedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "processingTime": {
+            "type": "number",
+            "description": "Processing time in milliseconds"
+          }
+        }
+      }
+    },
+    "required": ["result"]
+  },
+  "pricing": {
+    "model": "per-request",
+    "cost": 0.001,
+    "currency": "SOL"
+  },
+  "requirements": {
+    "node": ">=18.0.0",
+    "memory": "128MB",
+    "cpu": "0.1"
+  },
+  "endpoints": {
+    "process": {
+      "method": "POST",
+      "path": "/process",
+      "description": "Process a message"
+    },
+    "health": {
+      "method": "GET",
+      "path": "/health",
+      "description": "Health check endpoint"
+    }
+  },
+  "tags": ["template", "basic", "example"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agent-labs/templates"
+  }
+}

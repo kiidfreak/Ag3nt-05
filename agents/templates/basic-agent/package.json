@@ -1,0 +1,40 @@
+{
+  "name": "basic-agent-template",
+  "version": "1.0.0",
+  "description": "Basic agent template for Agent Labs OS",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "dependencies": {
+    "@agent-labs/sdk": "workspace:*",
+    "@agent-labs/types": "workspace:*",
+    "@agent-labs/coral-client": "workspace:*",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "prettier": "^3.0.0"
+  },
+  "keywords": [
+    "agent",
+    "ai",
+    "coral-protocol",
+    "agent-labs"
+  ],
+  "author": "Agent Labs Team",
+  "license": "MIT"
+}

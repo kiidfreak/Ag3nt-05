@@ -1,0 +1,28 @@
+{
+  "name": "@agent-labs/solana-client",
+  "version": "0.1.0",
+  "description": "Solana blockchain client for Agent Labs OS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.78.0",
+    "@coral-xyz/anchor": "^0.28.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "solana",
+    "blockchain",
+    "crypto",
+    "agent-labs"
+  ],
+  "author": "Agent Labs Team",
+  "license": "MIT"
+}

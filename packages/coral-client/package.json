@@ -1,0 +1,27 @@
+{
+  "name": "@agent-labs/coral-client",
+  "version": "0.1.0",
+  "description": "Coral Protocol client for Agent Labs OS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "axios": "^1.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "coral-protocol",
+    "agent",
+    "orchestration",
+    "agent-labs"
+  ],
+  "author": "Agent Labs Team",
+  "license": "MIT"
+}

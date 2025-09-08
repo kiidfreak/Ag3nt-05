@@ -1,0 +1,26 @@
+{
+  "name": "@agent-labs/utils",
+  "version": "0.1.0",
+  "description": "Shared utility functions for Agent Labs OS",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "utils",
+    "utilities",
+    "agent-labs"
+  ],
+  "author": "Agent Labs Team",
+  "license": "MIT"
+}
