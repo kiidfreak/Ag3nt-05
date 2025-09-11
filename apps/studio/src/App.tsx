@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Components
@@ -30,6 +30,10 @@ const queryClient = new QueryClient({
 
 const AppContent: React.FC = () => {
   const { flows, agents, handleFlowClick, handleAgentClick, handleCreateFlow } = useAppContext();
+  const location = useLocation();
+  
+  // Check if we're on the Studio page
+  const isStudioPage = location.pathname === '/studio';
 
   // Get recent flows (last 3)
   const recentFlows = flows.slice(0, 3).map(flow => ({
@@ -48,16 +52,18 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      {!isStudioPage && <Header />}
       <div className="flex">
-        <Sidebar 
-          recentFlows={recentFlows}
-          agents={availableAgents}
-          onFlowClick={handleFlowClick}
-          onAgentClick={handleAgentClick}
-          onCreateFlow={handleCreateFlow}
-        />
-        <main className="flex-1 p-6">
+        {!isStudioPage && (
+          <Sidebar 
+            recentFlows={recentFlows}
+            agents={availableAgents}
+            onFlowClick={handleFlowClick}
+            onAgentClick={handleAgentClick}
+            onCreateFlow={handleCreateFlow}
+          />
+        )}
+        <main className={`flex-1 ${!isStudioPage ? 'p-6' : ''}`}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/studio" element={<Studio />} />

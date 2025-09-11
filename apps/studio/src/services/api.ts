@@ -1,6 +1,6 @@
-import { mockApiService, type MockAgent as Agent, type MockSession as Session, type MockMessage as Message } from './mockData';
+import { mockApiService, type MockAgent, type MockSession, type MockMessage } from './mockData';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
 // Use mock data for now
 const USE_MOCK_DATA = true;
@@ -9,7 +9,8 @@ export interface Agent {
   id: string;
   name: string;
   description?: string;
-  type: 'basic' | 'coral' | 'solana' | 'custom';
+  type: 'basic' | 'coral' | 'solana' | 'custom' | 'collector' | 'synthesizer' | 'scorer' | 'auditor' | 'orchestrator';
+  category: 'collector' | 'synthesizer' | 'scorer' | 'auditor' | 'orchestrator' | 'basic';
   config: Record<string, any>;
   status: 'active' | 'inactive' | 'error';
   version: string;
@@ -23,6 +24,23 @@ export interface Agent {
   _count: {
     sessions: number;
   };
+  ports?: {
+    input: Array<{
+      id: string;
+      type: 'input';
+      dataType: string;
+      label: string;
+      required?: boolean;
+    }>;
+    output: Array<{
+      id: string;
+      type: 'output';
+      dataType: string;
+      label: string;
+    }>;
+  };
+  industry?: string[];
+  capabilities?: string[];
 }
 
 export interface Session {

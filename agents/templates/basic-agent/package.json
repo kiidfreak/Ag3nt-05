@@ -14,9 +14,6 @@
     "format": "prettier --write src/**/*.ts"
   },
   "dependencies": {
-    "@agent-labs/sdk": "workspace:*",
-    "@agent-labs/types": "workspace:*",
-    "@agent-labs/coral-client": "workspace:*",
     "zod": "^3.22.0"
   },
   "devDependencies": {

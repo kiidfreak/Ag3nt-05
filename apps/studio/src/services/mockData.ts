@@ -2,7 +2,8 @@ export interface MockAgent {
   id: string;
   name: string;
   description?: string;
-  type: 'basic' | 'coral' | 'solana' | 'custom';
+  type: 'basic' | 'coral' | 'solana' | 'custom' | 'collector' | 'synthesizer' | 'scorer' | 'auditor' | 'orchestrator';
+  category: 'collector' | 'synthesizer' | 'scorer' | 'auditor' | 'orchestrator' | 'basic';
   config: Record<string, any>;
   status: 'active' | 'inactive' | 'error';
   version: string;
@@ -16,6 +17,23 @@ export interface MockAgent {
   _count: {
     sessions: number;
   };
+  ports?: {
+    input: Array<{
+      id: string;
+      type: 'input';
+      dataType: string;
+      label: string;
+      required?: boolean;
+    }>;
+    output: Array<{
+      id: string;
+      type: 'output';
+      dataType: string;
+      label: string;
+    }>;
+  };
+  industry?: string[];
+  capabilities?: string[];
 }
 
 export interface MockSession {
@@ -85,6 +103,7 @@ export const mockAgents: MockAgent[] = [
     name: 'Basic Chat Agent',
     description: 'A simple conversational agent for basic interactions',
     type: 'basic',
+    category: 'basic',
     config: {
       model: 'gpt-3.5-turbo',
       temperature: 0.7,
@@ -109,6 +128,7 @@ export const mockAgents: MockAgent[] = [
     name: 'Coral Protocol Agent',
     description: 'An agent specialized in Coral Protocol interactions',
     type: 'coral',
+    category: 'basic',
     config: {
       coralApiKey: 'demo-key',
       network: 'devnet',
@@ -132,6 +152,7 @@ export const mockAgents: MockAgent[] = [
     name: 'Solana DeFi Agent',
     description: 'An agent for Solana DeFi operations',
     type: 'solana',
+    category: 'basic',
     config: {
       rpcUrl: 'https://api.devnet.solana.com',
       walletAddress: 'demo-wallet-address',
@@ -155,6 +176,7 @@ export const mockAgents: MockAgent[] = [
     name: 'Compliance Agent',
     description: 'Automated compliance checking and reporting',
     type: 'custom',
+    category: 'basic',
     config: {
       rules: ['kyc', 'aml', 'sanctions'],
       reporting: true,
@@ -422,6 +444,290 @@ export const mockFlows: MockFlow[] = [
       },
     ],
   },
+  {
+    id: 'flow-3',
+    name: 'Healthcare Diagnosis Flow',
+    description: 'Complete patient intake to treatment recommendation flow',
+    config: {
+      version: '1.0.0',
+      triggers: ['patient_input'],
+      steps: [
+        {
+          id: 'step-1',
+          type: 'collector',
+          name: 'Intake Collector',
+        },
+        {
+          id: 'step-2',
+          type: 'synthesizer',
+          name: 'Symptom Synthesizer',
+        },
+        {
+          id: 'step-3',
+          type: 'scorer',
+          name: 'Risk Scorer',
+        },
+        {
+          id: 'step-4',
+          type: 'auditor',
+          name: 'Fairness Auditor',
+        },
+        {
+          id: 'step-5',
+          type: 'orchestrator',
+          name: 'Treatment Orchestrator',
+        },
+      ],
+    },
+    status: 'published',
+    createdAt: '2025-01-08T11:00:00Z',
+    updatedAt: '2025-01-08T11:00:00Z',
+    user: {
+      id: 'user-1',
+      name: 'Admin User',
+      email: 'admin@agentlabs.io',
+    },
+    nodes: [
+      {
+        id: 'node-h1',
+        type: 'collector',
+        config: {
+          name: 'Patient Intake',
+          dataSource: 'FHIR/HL7',
+        },
+        position: { x: 100, y: 100 },
+        createdAt: '2025-01-08T11:00:00Z',
+        updatedAt: '2025-01-08T11:00:00Z',
+        flowId: 'flow-3',
+      },
+      {
+        id: 'node-h2',
+        type: 'synthesizer',
+        config: {
+          name: 'Symptom Analysis',
+          model: 'Mistral-7B',
+        },
+        position: { x: 300, y: 100 },
+        createdAt: '2025-01-08T11:00:00Z',
+        updatedAt: '2025-01-08T11:00:00Z',
+        flowId: 'flow-3',
+      },
+      {
+        id: 'node-h3',
+        type: 'scorer',
+        config: {
+          name: 'Risk Assessment',
+          algorithm: 'ML-based',
+        },
+        position: { x: 500, y: 100 },
+        createdAt: '2025-01-08T11:00:00Z',
+        updatedAt: '2025-01-08T11:00:00Z',
+        flowId: 'flow-3',
+      },
+      {
+        id: 'node-h4',
+        type: 'auditor',
+        config: {
+          name: 'Bias Check',
+          metrics: ['demographics', 'geography'],
+        },
+        position: { x: 700, y: 100 },
+        createdAt: '2025-01-08T11:00:00Z',
+        updatedAt: '2025-01-08T11:00:00Z',
+        flowId: 'flow-3',
+      },
+      {
+        id: 'node-h5',
+        type: 'orchestrator',
+        config: {
+          name: 'Treatment Plan',
+          decisionEngine: 'Rule-based',
+        },
+        position: { x: 900, y: 100 },
+        createdAt: '2025-01-08T11:00:00Z',
+        updatedAt: '2025-01-08T11:00:00Z',
+        flowId: 'flow-3',
+      },
+    ],
+  },
+  {
+    id: 'flow-4',
+    name: 'Financial Risk Assessment',
+    description: 'Open Banking data analysis and risk scoring flow',
+    config: {
+      version: '1.0.0',
+      triggers: ['banking_data'],
+      steps: [
+        {
+          id: 'step-1',
+          type: 'collector',
+          name: 'Data Harvester',
+        },
+        {
+          id: 'step-2',
+          type: 'synthesizer',
+          name: 'Risk Synthesizer',
+        },
+        {
+          id: 'step-3',
+          type: 'auditor',
+          name: 'Fairness Auditor',
+        },
+        {
+          id: 'step-4',
+          type: 'orchestrator',
+          name: 'Decision Orchestrator',
+        },
+      ],
+    },
+    status: 'published',
+    createdAt: '2025-01-08T12:00:00Z',
+    updatedAt: '2025-01-08T12:00:00Z',
+    user: {
+      id: 'user-1',
+      name: 'Admin User',
+      email: 'admin@agentlabs.io',
+    },
+    nodes: [
+      {
+        id: 'node-f1',
+        type: 'collector',
+        config: {
+          name: 'Banking Data',
+          dataSource: 'Open Banking API',
+        },
+        position: { x: 100, y: 100 },
+        createdAt: '2025-01-08T12:00:00Z',
+        updatedAt: '2025-01-08T12:00:00Z',
+        flowId: 'flow-4',
+      },
+      {
+        id: 'node-f2',
+        type: 'synthesizer',
+        config: {
+          name: 'Risk Analysis',
+          model: 'OpenAI GPT-4',
+        },
+        position: { x: 300, y: 100 },
+        createdAt: '2025-01-08T12:00:00Z',
+        updatedAt: '2025-01-08T12:00:00Z',
+        flowId: 'flow-4',
+      },
+      {
+        id: 'node-f3',
+        type: 'auditor',
+        config: {
+          name: 'Compliance Check',
+          standards: ['GDPR', 'PCI-DSS'],
+        },
+        position: { x: 500, y: 100 },
+        createdAt: '2025-01-08T12:00:00Z',
+        updatedAt: '2025-01-08T12:00:00Z',
+        flowId: 'flow-4',
+      },
+      {
+        id: 'node-f4',
+        type: 'orchestrator',
+        config: {
+          name: 'Credit Decision',
+          rules: 'Regulatory',
+        },
+        position: { x: 700, y: 100 },
+        createdAt: '2025-01-08T12:00:00Z',
+        updatedAt: '2025-01-08T12:00:00Z',
+        flowId: 'flow-4',
+      },
+    ],
+  },
+  {
+    id: 'flow-5',
+    name: 'Insurance Claims Processing',
+    description: 'Automated insurance claim assessment and settlement',
+    config: {
+      version: '1.0.0',
+      triggers: ['claim_submission'],
+      steps: [
+        {
+          id: 'step-1',
+          type: 'scorer',
+          name: 'Peril Scorer',
+        },
+        {
+          id: 'step-2',
+          type: 'synthesizer',
+          name: 'Memory Synthesizer',
+        },
+        {
+          id: 'step-3',
+          type: 'orchestrator',
+          name: 'Decision Orchestrator',
+        },
+        {
+          id: 'step-4',
+          type: 'auditor',
+          name: 'Fairness Auditor',
+        },
+      ],
+    },
+    status: 'draft',
+    createdAt: '2025-01-08T13:00:00Z',
+    updatedAt: '2025-01-08T13:00:00Z',
+    user: {
+      id: 'user-1',
+      name: 'Admin User',
+      email: 'admin@agentlabs.io',
+    },
+    nodes: [
+      {
+        id: 'node-i1',
+        type: 'scorer',
+        config: {
+          name: 'Risk Assessment',
+          dataSource: 'Climate/Weather APIs',
+        },
+        position: { x: 100, y: 100 },
+        createdAt: '2025-01-08T13:00:00Z',
+        updatedAt: '2025-01-08T13:00:00Z',
+        flowId: 'flow-5',
+      },
+      {
+        id: 'node-i2',
+        type: 'synthesizer',
+        config: {
+          name: 'Claim History',
+          model: 'Mistral-7B',
+        },
+        position: { x: 300, y: 100 },
+        createdAt: '2025-01-08T13:00:00Z',
+        updatedAt: '2025-01-08T13:00:00Z',
+        flowId: 'flow-5',
+      },
+      {
+        id: 'node-i3',
+        type: 'orchestrator',
+        config: {
+          name: 'Settlement Decision',
+          paymentSystem: 'Solana + Crossmint',
+        },
+        position: { x: 500, y: 100 },
+        createdAt: '2025-01-08T13:00:00Z',
+        updatedAt: '2025-01-08T13:00:00Z',
+        flowId: 'flow-5',
+      },
+      {
+        id: 'node-i4',
+        type: 'auditor',
+        config: {
+          name: 'Bias Detection',
+          metrics: ['geography', 'income'],
+        },
+        position: { x: 700, y: 100 },
+        createdAt: '2025-01-08T13:00:00Z',
+        updatedAt: '2025-01-08T13:00:00Z',
+        flowId: 'flow-5',
+      },
+    ],
+  },
 ];
 
 // Mock API service
@@ -460,6 +766,7 @@ export class MockApiService {
           name: agent.name || 'New Agent',
           description: agent.description,
           type: agent.type || 'basic',
+          category: agent.category || 'basic',
           config: agent.config || {},
           status: 'active',
           version: '1.0.0',
@@ -533,7 +840,9 @@ export class MockApiService {
   async createSession(session: Partial<MockSession>): Promise<{ success: boolean; data: MockSession }> {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const agent = this.agents.find(a => a.id === session.agentId);
+        const agent = this.agents.find(a => a.id === (typeof session.agent === 'string' ? session.agent : session.agent?.id));
+
+        
         const newSession: MockSession = {
           id: `session-${Date.now()}`,
           name: session.name || `Session with ${agent?.name || 'Unknown Agent'}`,
@@ -548,7 +857,7 @@ export class MockApiService {
             email: 'admin@agentlabs.io',
           },
           agent: {
-            id: session.agentId || 'agent-1',
+            id: (typeof session.agent === 'string' ? session.agent : session.agent?.id) || 'agent-1',
             name: agent?.name || 'Unknown Agent',
             type: agent?.type || 'basic',
           },

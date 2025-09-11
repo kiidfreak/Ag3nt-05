@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Play, Save, Settings, Trash2, Bot, Zap, Shield, Coins, ArrowRight, Folder } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Play, Save, Settings, Trash2, Bot, Zap, Shield, Coins, ArrowRight, Folder, ArrowLeft } from 'lucide-react';
 import { apiService } from '../services/api';
 import { mockApiService, type MockFlow, type MockFlowNode, type MockAgent } from '../services/mockData';
+import { allEnhancedAgents, agentCategories } from '../services/agentTypes';
+import { allPipelineTemplates, templateCategories } from '../services/pipelineTemplates';
+import { checkInfrastructureHealth } from '../services/supportingInfrastructure';
+import { executeHealthcareFlowExample, createSamplePatient } from '../services/healthcareFlowExample';
+import { executeFinanceFlowExample, createSampleApplicant } from '../services/financeFlowExample';
+import { executeInsuranceFlowExample, createSampleInsuranceApplication } from '../services/insuranceFlowExample';
+import { executeEducationFlowExample, createSampleStudent } from '../services/educationFlowExample';
+import { executeJusticeFlowExample, createSampleLegalCase } from '../services/justiceFlowExample';
+import EnhancedCanvas from '../components/EnhancedCanvas';
+import EnhancedPropertiesPanel from '../components/EnhancedPropertiesPanel';
+import EnhancedSidebar from '../components/EnhancedSidebar';
 
 interface DragItem {
   type: 'agent' | 'condition' | 'action' | 'input' | 'output';
@@ -11,20 +23,72 @@ interface DragItem {
   color: string;
 }
 
+interface Connection {
+  id: string;
+  sourceNodeId: string;
+  sourcePortId: string;
+  targetNodeId: string;
+  targetPortId: string;
+  type: 'data' | 'control' | 'event';
+  status: 'connected' | 'disconnected' | 'error';
+}
+
+interface Port {
+  id: string;
+  type: 'input' | 'output';
+  dataType: 'string' | 'number' | 'boolean' | 'object' | 'any';
+  label: string;
+  required?: boolean;
+}
+
+interface EnhancedFlowNode extends MockFlowNode {
+  name: string; // Add name property
+  ports: Port[];
+  status: 'idle' | 'running' | 'completed' | 'error';
+}
+
 const Studio: React.FC = () => {
+  const navigate = useNavigate();
   const [flows, setFlows] = useState<MockFlow[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<MockFlow | null>(null);
-  const [nodes, setNodes] = useState<MockFlowNode[]>([]);
+  const [nodes, setNodes] = useState<EnhancedFlowNode[]>([]);
+  const [connections, setConnections] = useState<Connection[]>([]);
   const [agents, setAgents] = useState<MockAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null);
   const [showCreateFlow, setShowCreateFlow] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
-  const [draggedNode, setDraggedNode] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [selectedNode, setSelectedNode] = useState<EnhancedFlowNode | null>(null);
   const [flowName, setFlowName] = useState('');
   const [flowDescription, setFlowDescription] = useState('');
+  const [pipelineTemplates, setPipelineTemplates] = useState(allPipelineTemplates);
+  const [infrastructureHealth, setInfrastructureHealth] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  // Get recent flows (last 3)
+  const recentFlows = flows.slice(0, 3).map(flow => ({
+    id: flow.id,
+    name: flow.name,
+    status: flow.status,
+  }));
+
+  // Get available agents (combine API agents with enhanced agents)
+  const availableAgents = [
+    ...agents.map(agent => ({
+      id: agent.id,
+      name: agent.name,
+      status: agent.status,
+      type: agent.type,
+    })),
+    ...allEnhancedAgents.map(agent => ({
+      id: agent.id,
+      name: agent.name,
+      status: agent.status,
+      type: agent.type,
+    }))
+  ];
 
   const dragItems: DragItem[] = [
     {
@@ -64,6 +128,312 @@ const Studio: React.FC = () => {
     },
   ];
 
+  // Enhanced drag items with new agent categories
+  const enhancedDragItems = [
+    ...dragItems,
+    // Collector Agents
+    ...allEnhancedAgents.filter(agent => agent.category === 'collector').map(agent => ({
+      type: 'agent' as const,
+      id: agent.id,
+      name: agent.name,
+      icon: Bot,
+      color: agentCategories.collector.color,
+      category: 'collector',
+      description: agent.description,
+      industry: agent.industry,
+      capabilities: agent.capabilities
+    })),
+    // Synthesizer Agents
+    ...allEnhancedAgents.filter(agent => agent.category === 'synthesizer').map(agent => ({
+      type: 'agent' as const,
+      id: agent.id,
+      name: agent.name,
+      icon: Bot,
+      color: agentCategories.synthesizer.color,
+      category: 'synthesizer',
+      description: agent.description,
+      industry: agent.industry,
+      capabilities: agent.capabilities
+    })),
+    // Scorer Agents
+    ...allEnhancedAgents.filter(agent => agent.category === 'scorer').map(agent => ({
+      type: 'agent' as const,
+      id: agent.id,
+      name: agent.name,
+      icon: Bot,
+      color: agentCategories.scorer.color,
+      category: 'scorer',
+      description: agent.description,
+      industry: agent.industry,
+      capabilities: agent.capabilities
+    })),
+    // Auditor Agents
+    ...allEnhancedAgents.filter(agent => agent.category === 'auditor').map(agent => ({
+      type: 'agent' as const,
+      id: agent.id,
+      name: agent.name,
+      icon: Bot,
+      color: agentCategories.auditor.color,
+      category: 'auditor',
+      description: agent.description,
+      industry: agent.industry,
+      capabilities: agent.capabilities
+    })),
+    // Orchestrator Agents
+    ...allEnhancedAgents.filter(agent => agent.category === 'orchestrator').map(agent => ({
+      type: 'agent' as const,
+      id: agent.id,
+      name: agent.name,
+      icon: Bot,
+      color: agentCategories.orchestrator.color,
+      category: 'orchestrator',
+      description: agent.description,
+      industry: agent.industry,
+      capabilities: agent.capabilities
+    }))
+  ];
+
+  // Component port configurations
+  const getComponentPorts = (type: string): Port[] => {
+    switch (type) {
+      case 'input':
+        return [
+          { id: 'output', type: 'output', dataType: 'any', label: 'Data' }
+        ];
+      case 'agent':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Input', required: true },
+          { id: 'output', type: 'output', dataType: 'any', label: 'Output' }
+        ];
+      case 'condition':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Input', required: true },
+          { id: 'true', type: 'output', dataType: 'any', label: 'True' },
+          { id: 'false', type: 'output', dataType: 'any', label: 'False' }
+        ];
+      case 'action':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Input', required: true },
+          { id: 'output', type: 'output', dataType: 'any', label: 'Result' }
+        ];
+      case 'output':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Data', required: true }
+        ];
+      // New agent types
+      case 'collector':
+        return [
+          { id: 'output', type: 'output', dataType: 'any', label: 'Collected Data' }
+        ];
+      case 'synthesizer':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Raw Data', required: true },
+          { id: 'output', type: 'output', dataType: 'any', label: 'Synthesized Data' }
+        ];
+      case 'scorer':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Data to Score', required: true },
+          { id: 'output', type: 'output', dataType: 'number', label: 'Score' }
+        ];
+      case 'auditor':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Data to Audit', required: true },
+          { id: 'output', type: 'output', dataType: 'object', label: 'Audit Results' }
+        ];
+      case 'orchestrator':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Input Data', required: true },
+          { id: 'output', type: 'output', dataType: 'any', label: 'Decision/Output' }
+        ];
+      
+      // Template-specific node types
+      case 'intake-collector':
+        return [
+          { id: 'trigger', type: 'input', dataType: 'trigger', label: 'Trigger', required: true },
+          { id: 'data', type: 'output', dataType: 'structured-data', label: 'Collected Data' }
+        ];
+      case 'symptom-synthesizer':
+      case 'memory-synthesizer':
+      case 'skills-synthesizer':
+        return [
+          { id: 'input', type: 'input', dataType: 'any', label: 'Input Data', required: true },
+          { id: 'output', type: 'output', dataType: 'analysis', label: 'Analysis' }
+        ];
+      case 'risk-scorer':
+      case 'peril-scorer':
+        return [
+          { id: 'input', type: 'input', dataType: 'risk-factors', label: 'Risk Factors', required: true },
+          { id: 'output', type: 'output', dataType: 'risk-score', label: 'Risk Score' }
+        ];
+      case 'fairness-auditor':
+      case 'bias-auditor':
+        return [
+          { id: 'input', type: 'input', dataType: 'decision-data', label: 'Decision Data', required: true },
+          { id: 'output', type: 'output', dataType: 'fairness-report', label: 'Fairness Report' }
+        ];
+      case 'treatment-orchestrator':
+      case 'decision-orchestrator':
+        return [
+          { id: 'input', type: 'input', dataType: 'analysis-data', label: 'Analysis', required: true },
+          { id: 'output', type: 'output', dataType: 'decision', label: 'Decision' }
+        ];
+      case 'data-harvester':
+        return [
+          { id: 'trigger', type: 'input', dataType: 'application-trigger', label: 'Application', required: true },
+          { id: 'data', type: 'output', dataType: 'unstructured-data', label: 'Harvested Data' }
+        ];
+      case 'evidence-collector':
+        return [
+          { id: 'trigger', type: 'input', dataType: 'case-trigger', label: 'Case', required: true },
+          { id: 'evidence', type: 'output', dataType: 'evidence-bundle', label: 'Evidence Bundle' }
+        ];
+      case 'recommendation-engine':
+        return [
+          { id: 'input', type: 'input', dataType: 'user-profile', label: 'User Profile', required: true },
+          { id: 'output', type: 'output', dataType: 'recommendations', label: 'Recommendations' }
+        ];
+      default:
+        return [];
+    }
+  };
+
+  // Convert MockFlowNode to EnhancedFlowNode
+  const enhanceNode = (node: MockFlowNode): EnhancedFlowNode => ({
+    ...node,
+    name: node.config?.name || `${node.type.charAt(0).toUpperCase() + node.type.slice(1)} Node`, // Add default name
+    ports: getComponentPorts(node.type),
+    status: 'idle'
+  });
+
+  // AI Prompts for different node types and industries
+  const getAIPromptsForNode = (nodeType: string, industry: string, nodeName: string) => {
+    const prompts: Record<string, Record<string, string>> = {
+      'intake-collector': {
+        healthcare: `You are a medical data intake specialist. Analyze patient information including symptoms, medical history, and current medications. Extract structured data while maintaining HIPAA compliance. Focus on identifying key medical indicators and potential risk factors.`,
+        finance: `You are a financial data analyst. Process loan applications, credit reports, and financial statements. Extract key financial metrics, identify red flags, and structure data for risk assessment. Ensure PCI compliance and data accuracy.`,
+        insurance: `You are an insurance data specialist. Analyze policy applications, property details, and risk factors. Extract exposure data, identify potential hazards, and structure information for underwriting decisions.`,
+        education: `You are an educational credential analyst. Verify academic records, certifications, and skills documentation. Extract structured skill profiles and validate credential authenticity using blockchain verification.`,
+        justice: `You are a legal evidence specialist. Process case files, witness statements, and digital evidence. Maintain chain of custody, extract key facts, and structure evidence for legal analysis.`
+      },
+      'symptom-synthesizer': {
+        healthcare: `You are a medical AI specialist. Analyze patient symptoms using SNOMED-CT ontology. Correlate symptoms with potential diagnoses, identify patterns, and provide confidence scores. Consider differential diagnoses and recommend further testing.`,
+        finance: `You are a financial pattern analyst. Analyze spending patterns, income stability, and credit behavior. Identify financial health indicators, predict future behavior, and assess creditworthiness using advanced ML models.`,
+        insurance: `You are an insurance risk analyst. Analyze property characteristics, location data, and historical claims. Assess exposure to natural disasters, crime rates, and other risk factors using geospatial and climate data.`,
+        education: `You are a skills assessment specialist. Map credentials to standardized skill frameworks (SFIA, ESCO, O*NET). Assess skill levels, identify gaps, and create comprehensive skill profiles for career development.`,
+        justice: `You are a legal pattern analyst. Analyze case precedents, evidence correlations, and legal patterns. Identify similar cases, assess evidence strength, and provide legal insights for case strategy.`
+      },
+      'risk-scorer': {
+        healthcare: `You are a clinical risk assessment AI. Evaluate patient risk factors across multiple dimensions: clinical severity, safety concerns, and prognosis. Use evidence-based scoring methods and provide detailed risk explanations.`,
+        finance: `You are a credit risk assessment AI. Evaluate creditworthiness, fraud risk, and default probability. Use regulatory-compliant scoring models and provide transparent risk explanations for lending decisions.`,
+        insurance: `You are an insurance risk assessment AI. Evaluate peril exposure, actuarial risk, and loss probability. Use climate models, historical data, and real-time information for accurate risk scoring.`,
+        education: `You are an educational outcome predictor. Assess learning potential, career trajectory, and skill development likelihood. Use market data and educational psychology models for personalized recommendations.`,
+        justice: `You are a legal outcome predictor. Assess case strength, precedent alignment, and success probability. Use legal databases and historical case analysis for strategic recommendations.`
+      },
+      'fairness-auditor': {
+        healthcare: `You are a medical fairness auditor. Detect bias in healthcare decisions across demographic, socioeconomic, and geographic dimensions. Ensure equitable treatment and identify potential discrimination in medical care.`,
+        finance: `You are a fair lending auditor. Detect bias in credit decisions and ensure compliance with fair lending laws. Analyze demographic parity, equalized odds, and other fairness metrics.`,
+        insurance: `You are an insurance fairness auditor. Detect bias in underwriting decisions and ensure equitable treatment across all demographic groups. Analyze geographic and demographic fairness in insurance practices.`,
+        education: `You are an educational fairness auditor. Detect bias in assessment and recommendation systems. Ensure equitable access to educational opportunities across all demographic groups.`,
+        justice: `You are a legal fairness auditor. Detect bias in legal decisions and ensure equitable treatment under the law. Analyze demographic and socioeconomic fairness in legal outcomes.`
+      },
+      'decision-orchestrator': {
+        healthcare: `You are a medical decision orchestrator. Integrate clinical data, risk assessments, and fairness audits to make evidence-based treatment recommendations. Ensure patient safety and regulatory compliance.`,
+        finance: `You are a lending decision orchestrator. Integrate credit scores, risk assessments, and fairness audits to make compliant lending decisions. Balance risk management with fair access to credit.`,
+        insurance: `You are an underwriting decision orchestrator. Integrate risk assessments, actuarial models, and fairness audits to make compliant underwriting decisions. Balance profitability with equitable coverage.`,
+        education: `You are an educational recommendation orchestrator. Integrate skill assessments, market analysis, and fairness audits to provide personalized learning recommendations. Ensure equitable access to education.`,
+        justice: `You are a legal decision orchestrator. Integrate evidence analysis, precedent research, and fairness audits to provide legal recommendations. Ensure equitable treatment under the law.`
+      }
+    };
+
+    return prompts[nodeType]?.[industry] || `You are an AI specialist for ${nodeName}. Process the input data according to industry best practices and provide accurate, fair, and compliant outputs.`;
+  };
+
+  // Process definitions for different node types
+  const getProcessesForNode = (nodeType: string, industry: string) => {
+    const processes: Record<string, string[]> = {
+      'intake-collector': [
+        'Data validation and sanitization',
+        'Format standardization',
+        'Compliance verification',
+        'Quality assurance checks',
+        'Data encryption and security'
+      ],
+      'symptom-synthesizer': [
+        'Pattern recognition and analysis',
+        'Confidence scoring',
+        'Correlation identification',
+        'Model inference and prediction',
+        'Result validation and explanation'
+      ],
+      'risk-scorer': [
+        'Multi-dimensional risk assessment',
+        'Weighted scoring calculation',
+        'Threshold evaluation',
+        'Risk explanation generation',
+        'Compliance verification'
+      ],
+      'fairness-auditor': [
+        'Bias detection analysis',
+        'Fairness metric calculation',
+        'Statistical significance testing',
+        'Bias report generation',
+        'Recommendation formulation'
+      ],
+      'decision-orchestrator': [
+        'Multi-source data integration',
+        'Decision logic evaluation',
+        'Confidence assessment',
+        'Human oversight integration',
+        'Final decision generation'
+      ]
+    };
+
+    return processes[nodeType] || ['Data processing', 'Analysis', 'Validation', 'Output generation'];
+  };
+
+  // Validation rules for different node types and industries
+  const getValidationRules = (nodeType: string, industry: string) => {
+    const rules: Record<string, Record<string, string[]>> = {
+      'intake-collector': {
+        healthcare: ['HIPAA compliance', 'Medical data accuracy', 'Patient consent verification'],
+        finance: ['PCI compliance', 'Financial data accuracy', 'Identity verification'],
+        insurance: ['Data completeness', 'Property verification', 'Risk factor validation'],
+        education: ['Credential verification', 'Blockchain validation', 'Skills framework compliance'],
+        justice: ['Chain of custody', 'Evidence integrity', 'Legal compliance']
+      },
+      'symptom-synthesizer': {
+        healthcare: ['Medical accuracy', 'Clinical validation', 'Confidence threshold'],
+        finance: ['Pattern accuracy', 'Statistical significance', 'Model validation'],
+        insurance: ['Risk assessment accuracy', 'Actuarial validation', 'Climate data verification'],
+        education: ['Skills mapping accuracy', 'Framework compliance', 'Assessment validation'],
+        justice: ['Legal pattern accuracy', 'Precedent validation', 'Evidence correlation']
+      },
+      'risk-scorer': {
+        healthcare: ['Clinical risk accuracy', 'Safety threshold compliance', 'Medical validation'],
+        finance: ['Credit risk accuracy', 'Regulatory compliance', 'Fair lending validation'],
+        insurance: ['Actuarial accuracy', 'Risk model validation', 'Regulatory compliance'],
+        education: ['Outcome prediction accuracy', 'Educational psychology validation', 'Market data accuracy'],
+        justice: ['Legal outcome accuracy', 'Precedent alignment', 'Legal validation']
+      },
+      'fairness-auditor': {
+        healthcare: ['Demographic parity', 'Equalized odds', 'Medical fairness standards'],
+        finance: ['Fair lending compliance', 'Demographic parity', 'Equal opportunity'],
+        insurance: ['Geographic fairness', 'Demographic parity', 'Insurance fairness standards'],
+        education: ['Educational equity', 'Demographic parity', 'Access fairness'],
+        justice: ['Legal equity', 'Demographic parity', 'Justice fairness standards']
+      },
+      'decision-orchestrator': {
+        healthcare: ['Clinical safety', 'Regulatory compliance', 'Patient outcome optimization'],
+        finance: ['Regulatory compliance', 'Risk management', 'Fair access'],
+        insurance: ['Actuarial compliance', 'Regulatory requirements', 'Risk management'],
+        education: ['Educational standards', 'Equity compliance', 'Outcome optimization'],
+        justice: ['Legal compliance', 'Justice standards', 'Equity requirements']
+      }
+    };
+
+    return rules[nodeType]?.[industry] || ['Data accuracy', 'Process compliance', 'Output validation'];
+  };
+
   useEffect(() => {
     loadFlows();
   }, []);
@@ -72,23 +442,43 @@ const Studio: React.FC = () => {
     if (selectedFlow) {
       setFlowName(selectedFlow.name);
       setFlowDescription(selectedFlow.description || '');
+      // Convert nodes to enhanced nodes
+      const enhancedNodes = selectedFlow.nodes.map(enhanceNode);
+      setNodes(enhancedNodes);
     }
   }, [selectedFlow]);
+
+  // Listen for template drop events from the canvas
+  useEffect(() => {
+    const handleTemplateDrop = (event: CustomEvent) => {
+      const { template, position } = event.detail;
+      handleTemplateSelect(template);
+    };
+
+    window.addEventListener('templateDrop', handleTemplateDrop as EventListener);
+    
+    return () => {
+      window.removeEventListener('templateDrop', handleTemplateDrop as EventListener);
+    };
+  }, []);
 
   const loadFlows = async () => {
     try {
       setLoading(true);
-      const [flowsResponse, agentsResponse] = await Promise.all([
+      const [flowsResponse, agentsResponse, healthData] = await Promise.all([
         mockApiService.getFlows(),
-        mockApiService.getAgents()
+        mockApiService.getAgents(),
+        checkInfrastructureHealth()
       ]);
       
       setFlows(flowsResponse.data);
       setAgents(agentsResponse.data);
+      setInfrastructureHealth(healthData);
       
       if (flowsResponse.data.length > 0) {
         setSelectedFlow(flowsResponse.data[0]);
-        setNodes(flowsResponse.data[0].nodes);
+        const enhancedNodes = flowsResponse.data[0].nodes.map(enhanceNode);
+        setNodes(enhancedNodes);
       }
       setError(null);
     } catch (err) {
@@ -122,115 +512,6 @@ const Studio: React.FC = () => {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, item: DragItem) => {
-    setDraggedItem(item);
-    e.dataTransfer.effectAllowed = 'copy';
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedItem || !selectedFlow) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const newNode: MockFlowNode = {
-      id: `node-${Date.now()}`,
-      type: draggedItem.type,
-      config: {
-        name: draggedItem.name,
-        settings: {},
-      },
-      position: { x, y },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      flowId: selectedFlow.id,
-    };
-
-    const updatedNodes = [...nodes, newNode];
-    setNodes(updatedNodes);
-
-    // Update the flow with new nodes
-    const updatedFlow = {
-      ...selectedFlow,
-      nodes: updatedNodes,
-    };
-    setSelectedFlow(updatedFlow);
-
-    // Update flows array
-    setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
-  };
-
-  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    e.preventDefault();
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-
-    setDraggedNode(nodeId);
-    setDragOffset({ x: offsetX, y: offsetY });
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const canvas = document.querySelector('.canvas-container');
-      if (!canvas) return;
-
-      const canvasRect = canvas.getBoundingClientRect();
-      const x = e.clientX - canvasRect.left - offsetX;
-      const y = e.clientY - canvasRect.top - offsetY;
-
-      // Update node position in real-time
-      const updatedNodes = nodes.map(n =>
-        n.id === nodeId
-          ? { ...n, position: { x: Math.max(0, x), y: Math.max(0, y) } }
-          : n
-      );
-      setNodes(updatedNodes);
-    };
-
-    const handleMouseUp = () => {
-      setDraggedNode(null);
-      setDragOffset({ x: 0, y: 0 });
-
-      // Save the final position
-      if (selectedFlow) {
-        const updatedFlow = {
-          ...selectedFlow,
-          nodes: nodes,
-        };
-        setSelectedFlow(updatedFlow);
-        setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
-      }
-
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  };
-
-  const handleDeleteNode = (nodeId: string) => {
-    const updatedNodes = nodes.filter(node => node.id !== nodeId);
-    setNodes(updatedNodes);
-
-    if (selectedFlow) {
-      const updatedFlow = {
-        ...selectedFlow,
-        nodes: updatedNodes,
-      };
-      setSelectedFlow(updatedFlow);
-      setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
-    }
-  };
 
   const handleFlowNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFlowName(e.target.value);
@@ -256,7 +537,7 @@ const Studio: React.FC = () => {
       });
 
       setSelectedFlow(updatedFlow);
-      setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+      setFlows(flows.map((f: MockFlow) => f.id === selectedFlow.id ? updatedFlow : f));
     } catch (err) {
       console.error('Failed to update flow:', err);
     }
@@ -264,16 +545,58 @@ const Studio: React.FC = () => {
 
   const handleFlowSelect = (flow: MockFlow) => {
     setSelectedFlow(flow);
-    setNodes(flow.nodes);
+    const enhancedNodes = flow.nodes.map(enhanceNode);
+    setNodes(enhancedNodes);
+    setSelectedNode(null);
+  };
+
+  // Enhanced node handlers
+  const handleNodeUpdate = (updatedNode: EnhancedFlowNode) => {
+    const updatedNodes = nodes.map((node: EnhancedFlowNode) => 
+      node.id === updatedNode.id ? updatedNode : node
+    );
+    setNodes(updatedNodes);
+    setSelectedNode(updatedNode);
+  };
+
+  const handleNodeDelete = (nodeId: string) => {
+    const updatedNodes = nodes.filter((node: EnhancedFlowNode) => node.id !== nodeId);
+    const updatedConnections = connections.filter((conn: Connection) => 
+      conn.sourceNodeId !== nodeId && conn.targetNodeId !== nodeId
+    );
+    setNodes(updatedNodes);
+    setConnections(updatedConnections);
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode(null);
+    }
+  };
+
+  const handleConnectionDelete = (connectionId: string) => {
+    const updatedConnections = connections.filter((conn: Connection) => conn.id !== connectionId);
+    setConnections(updatedConnections);
+  };
+
+  const handleNodeDuplicate = (node: EnhancedFlowNode) => {
+    const newNode: EnhancedFlowNode = {
+      ...node,
+      id: `node-${Date.now()}`,
+      position: { x: node.position.x + 50, y: node.position.y + 50 }
+    };
+    setNodes([...nodes, newNode]);
+  };
+
+  const handleNodeSelect = (node: EnhancedFlowNode | null) => {
+    setSelectedNode(node);
   };
 
   const handleAgentSelect = (agent: MockAgent) => {
     // Add agent as a node to the current flow
     if (!selectedFlow) return;
 
-    const newNode: MockFlowNode = {
+    const newNode: EnhancedFlowNode = {
       id: `node-${Date.now()}`,
       type: 'agent',
+      name: agent.name, // Add the name property
       config: {
         name: agent.name,
         agentId: agent.id,
@@ -287,6 +610,8 @@ const Studio: React.FC = () => {
       updatedAt: new Date().toISOString(),
       flowId: selectedFlow.id,
       agentId: agent.id,
+      ports: getComponentPorts('agent'),
+      status: 'idle'
     };
 
     const updatedNodes = [...nodes, newNode];
@@ -294,21 +619,258 @@ const Studio: React.FC = () => {
 
     const updatedFlow = {
       ...selectedFlow,
-      nodes: updatedNodes,
+      nodes: updatedNodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        config: node.config,
+        position: node.position,
+        createdAt: node.createdAt,
+        updatedAt: node.updatedAt,
+        flowId: node.flowId,
+        agentId: node.agentId
+      })),
     };
     setSelectedFlow(updatedFlow);
-    setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+    setFlows(flows.map((f: MockFlow) => f.id === selectedFlow.id ? updatedFlow : f));
   };
 
-  const getNodeIcon = (type: string) => {
-    const item = dragItems.find(item => item.type === type);
-    return item ? item.icon : Bot;
+  const handleTemplateSelect = (template: any) => {
+    if (!selectedFlow) return;
+
+    // Create a mapping from template node IDs to new node IDs
+    const nodeIdMap = new Map();
+    
+    // Convert template nodes to enhanced nodes with enhanced AI prompts
+    const templateNodes = template.nodes.map((node: any) => {
+      const newNodeId = `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      nodeIdMap.set(node.id, newNodeId);
+      
+      // Enhance config with AI prompts and better processes
+      const enhancedConfig = {
+        name: node.name,
+        ...node.config,
+        // Add AI prompts based on node type and industry
+        aiPrompts: getAIPromptsForNode(node.type, template.industry, node.name),
+        // Add process definitions
+        processes: getProcessesForNode(node.type, template.industry),
+        // Add validation rules
+        validation: getValidationRules(node.type, template.industry)
+      };
+
+      return {
+        id: newNodeId,
+        type: node.type,
+        name: node.name,
+        config: enhancedConfig,
+        position: node.position,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        flowId: selectedFlow.id,
+        ports: getComponentPorts(node.type),
+        status: 'idle' as const
+      };
+    });
+
+    // Convert template connections using the node ID mapping
+    const templateConnections = template.connections.map((conn: any) => ({
+      id: `conn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      sourceNodeId: nodeIdMap.get(conn.source) || '',
+      targetNodeId: nodeIdMap.get(conn.target) || '',
+      sourcePortId: conn.sourcePort || 'output',
+      targetPortId: conn.targetPort || 'input',
+      type: 'data' as const,
+      status: 'connected' as const
+    }));
+
+    setNodes(templateNodes);
+    setConnections(templateConnections);
+
+    // Mark flow as draft when template is added
+    if (selectedFlow) {
+      const updatedFlow = {
+        ...selectedFlow,
+        status: 'draft' as const,
+        updatedAt: new Date().toISOString()
+      };
+      setSelectedFlow(updatedFlow);
+      setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+    }
   };
 
-  const getNodeColor = (type: string) => {
-    const item = dragItems.find(item => item.type === type);
-    return item ? item.color : 'bg-gray-100 text-gray-600';
+  // Run Flow Handler
+  const handleRunFlow = async () => {
+    if (!selectedFlow || nodes.length === 0) {
+      alert('Please select a flow with nodes to run');
+      return;
+    }
+
+    try {
+      // Update all nodes to running status
+      const runningNodes = nodes.map(node => ({ ...node, status: 'running' as const }));
+      setNodes(runningNodes);
+
+      console.log('Running flow:', selectedFlow.name);
+      console.log('Nodes:', nodes);
+      console.log('Connections:', connections);
+
+      // Check flow type and execute appropriate specialized flow
+      const flowName = selectedFlow.name.toLowerCase();
+      const flowDescription = selectedFlow.description?.toLowerCase() || '';
+      
+      if (flowName.includes('healthcare') || flowDescription.includes('healthcare') ||
+          nodes.some(node => node.type.includes('symptom') || node.type.includes('treatment'))) {
+        console.log('Executing Healthcare Flow Example...');
+        await executeHealthcareFlowExample();
+        console.log('Healthcare flow execution completed!');
+      } else if (flowName.includes('finance') || flowDescription.includes('finance') ||
+                 nodes.some(node => node.type.includes('credit') || node.type.includes('lending'))) {
+        console.log('Executing Finance Flow Example...');
+        await executeFinanceFlowExample();
+        console.log('Finance flow execution completed!');
+      } else if (flowName.includes('insurance') || flowDescription.includes('insurance') ||
+                 nodes.some(node => node.type.includes('peril') || node.type.includes('underwriting'))) {
+        console.log('Executing Insurance Flow Example...');
+        await executeInsuranceFlowExample();
+        console.log('Insurance flow execution completed!');
+      } else if (flowName.includes('education') || flowDescription.includes('education') ||
+                 nodes.some(node => node.type.includes('skills') || node.type.includes('learning'))) {
+        console.log('Executing Education Flow Example...');
+        await executeEducationFlowExample();
+        console.log('Education flow execution completed!');
+      } else if (flowName.includes('justice') || flowDescription.includes('justice') ||
+                 nodes.some(node => node.type.includes('evidence') || node.type.includes('legal'))) {
+        console.log('Executing Justice Flow Example...');
+        await executeJusticeFlowExample();
+        console.log('Justice flow execution completed!');
+      } else {
+        // Generic flow execution for other flow types
+        console.log('Executing Generic Flow...');
+        
+        // Find starting nodes (nodes with no input connections)
+        const startingNodes = nodes.filter(node => 
+          !connections.some(conn => conn.targetNodeId === node.id)
+        );
+
+        console.log('Starting nodes:', startingNodes);
+
+        // Simulate execution through the flow
+        for (const startNode of startingNodes) {
+          await executeNode(startNode);
+        }
+      }
+
+      // Update nodes to completed status
+      const completedNodes = runningNodes.map(node => ({ ...node, status: 'completed' as const }));
+      setNodes(completedNodes);
+
+      alert('Flow execution completed successfully!');
+    } catch (error) {
+      console.error('Flow execution failed:', error);
+      
+      // Update nodes to error status
+      const errorNodes = nodes.map(node => ({ ...node, status: 'error' as const }));
+      setNodes(errorNodes);
+      
+      alert('Flow execution failed. Check console for details.');
+    }
   };
+
+  // Execute individual node
+  const executeNode = async (node: EnhancedFlowNode): Promise<void> => {
+    console.log(`Executing node: ${node.name} (${node.type})`);
+    
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Find connected nodes and execute them
+    const connectedNodes = connections
+      .filter(conn => conn.sourceNodeId === node.id)
+      .map(conn => nodes.find(n => n.id === conn.targetNodeId))
+      .filter(Boolean) as EnhancedFlowNode[];
+
+    for (const connectedNode of connectedNodes) {
+      await executeNode(connectedNode);
+    }
+  };
+
+  // Save Flow Handler
+  const handleSaveFlow = async () => {
+    if (!selectedFlow) {
+      alert('No flow selected to save');
+      return;
+    }
+
+    try {
+      // Update the flow with current nodes and connections
+      const updatedFlow = {
+        ...selectedFlow,
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type,
+          config: node.config,
+          position: node.position,
+          createdAt: node.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          flowId: selectedFlow.id,
+          agentId: node.agentId
+        })),
+        updatedAt: new Date().toISOString(),
+        status: 'draft' as const // Keep as draft until explicitly published
+      };
+
+      // Update local state
+      setSelectedFlow(updatedFlow);
+      setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+
+      // In a real app, this would save to the backend
+      console.log('Saving flow:', updatedFlow);
+      
+      alert('Flow saved successfully!');
+    } catch (error) {
+      console.error('Failed to save flow:', error);
+      alert('Failed to save flow. Check console for details.');
+    }
+  };
+
+  // Publish Flow Handler
+  const handlePublishFlow = async () => {
+    if (!selectedFlow) {
+      alert('No flow selected to publish');
+      return;
+    }
+
+    try {
+      const updatedFlow = {
+        ...selectedFlow,
+        status: 'published' as const,
+        updatedAt: new Date().toISOString()
+      };
+
+      setSelectedFlow(updatedFlow);
+      setFlows(flows.map(f => f.id === selectedFlow.id ? updatedFlow : f));
+
+      console.log('Published flow:', updatedFlow);
+      alert('Flow published successfully!');
+    } catch (error) {
+      console.error('Failed to publish flow:', error);
+      alert('Failed to publish flow. Check console for details.');
+    }
+  };
+
+  const handleFlowClick = (flowId: string) => {
+    const flow = flows.find(f => f.id === flowId);
+    if (flow) {
+      setSelectedFlow(flow);
+    }
+  };
+
+  const handleAgentClick = (agentId: string) => {
+    const agent = agents.find(a => a.id === agentId);
+    if (agent) {
+      handleAgentSelect(agent);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -322,267 +884,112 @@ const Studio: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Flows</h2>
-            <button
-              onClick={() => setShowCreateFlow(true)}
-              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-          
-          {showCreateFlow && (
-            <div className="mb-4">
-              <input
-                type="text"
-                value={newFlowName}
-                onChange={(e) => setNewFlowName(e.target.value)}
-                placeholder="Flow name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                onKeyPress={(e) => e.key === 'Enter' && handleCreateFlow()}
-              />
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={handleCreateFlow}
-                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                >
-                  Create
-                </button>
-                <button
-                  onClick={() => {
-                    setShowCreateFlow(false);
-                    setNewFlowName('');
-                  }}
-                  className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            {flows.map((flow) => (
-              <button
-                key={flow.id}
-                onClick={() => handleFlowSelect(flow)}
-                className={`w-full text-left p-3 rounded-lg transition-colors ${
-                  selectedFlow?.id === flow.id
-                    ? 'bg-blue-50 border border-blue-200'
-                    : 'hover:bg-gray-50'
-                }`}
-              >
-                <h3 className="font-medium text-sm">{flow.name}</h3>
-                <p className="text-xs text-gray-500 mt-1">{flow.description}</p>
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    flow.status === 'published' 
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {flow.status}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {flow.nodes.length} nodes
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Components</h3>
-          <div className="space-y-2">
-            {dragItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, item)}
-                  className="flex items-center p-2 bg-white border border-gray-200 rounded-lg cursor-move hover:shadow-sm transition-shadow"
-                >
-                  <div className={`p-2 rounded-lg ${item.color} mr-3`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-sm font-medium">{item.name}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Agent Library</h3>
-          <div className="space-y-2">
-            {agents.map((agent) => (
-              <button
-                key={agent.id}
-                onClick={() => handleAgentSelect(agent)}
-                className="w-full text-left p-2 rounded-lg hover:bg-gray-50 transition-colors"
-                disabled={!selectedFlow}
-              >
-                <div className="flex items-center">
-                  <div className={`w-2 h-2 rounded-full mr-3 ${
-                    agent.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                  }`}></div>
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">{agent.name}</h4>
-                    <p className="text-xs text-gray-500">{agent.type}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 p-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Properties</h3>
-          {selectedFlow && (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Flow Name</label>
-                <input
-                  type="text"
-                  value={flowName}
-                  onChange={handleFlowNameChange}
-                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Description</label>
-                <textarea
-                  value={flowDescription}
-                  onChange={handleFlowDescriptionChange}
-                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm h-20 resize-none"
-                />
-              </div>
-              <div>
-                <button
-                  onClick={handleSaveFlowProperties}
-                  className="w-full px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-                >
-                  Save Properties
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Enhanced Sidebar */}
+      <EnhancedSidebar
+        recentFlows={recentFlows}
+        agents={availableAgents}
+        onFlowClick={handleFlowClick}
+        onAgentClick={handleAgentClick}
+        onCreateFlow={handleCreateFlow}
+        onTemplateSelect={handleTemplateSelect}
+        infrastructureHealth={infrastructureHealth}
+        pipelineTemplates={pipelineTemplates}
+      />
 
       {/* Main Canvas */}
       <div className="flex-1 flex flex-col">
         <div className="bg-white border-b border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold">
-                {selectedFlow ? selectedFlow.name : 'Select a Flow'}
-              </h1>
-              <p className="text-sm text-gray-600">
-                {selectedFlow ? selectedFlow.description : 'Choose a flow to start editing'}
-              </p>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Back to Dashboard"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm font-medium">Back to App</span>
+              </button>
+              <div>
+                <h1 className="text-xl font-semibold">
+                  {selectedFlow ? selectedFlow.name : 'Select a Flow'}
+                </h1>
+                <p className="text-sm text-gray-600">
+                  {selectedFlow ? selectedFlow.description : 'Choose a flow to start editing'}
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
+              <button 
+                onClick={handleRunFlow}
+                disabled={!selectedFlow || nodes.length === 0}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Play className="w-4 h-4" />
                 <span>Run</span>
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button 
+                onClick={handleSaveFlow}
+                disabled={!selectedFlow}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Save className="w-4 h-4" />
                 <span>Save</span>
               </button>
+              {selectedFlow && selectedFlow.status === 'draft' && (
+                <button 
+                  onClick={handlePublishFlow}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Publish</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        <div
-          className="flex-1 relative overflow-hidden canvas-container"
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          {selectedFlow ? (
-            <div className="w-full h-full relative">
-              {/* Grid background */}
-              <div className="absolute inset-0 opacity-20">
-                <svg width="100%" height="100%">
-                  <defs>
-                    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" />
-                </svg>
-              </div>
-
-              {/* Flow nodes */}
-              {nodes.map((node) => {
-                const Icon = getNodeIcon(node.type);
-                return (
-                  <div
-                    key={node.id}
-                    onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                    className={`absolute cursor-move select-none ${
-                      draggedNode === node.id ? 'z-50' : 'z-10'
-                    }`}
-                    style={{
-                      left: node.position.x,
-                      top: node.position.y,
-                    }}
+        <div className="flex-1 flex">
+          {/* Enhanced Canvas */}
+          <div className="flex-1">
+            {selectedFlow ? (
+              <EnhancedCanvas
+                nodes={nodes}
+                connections={connections}
+                onNodesChange={setNodes}
+                onConnectionsChange={setConnections}
+                onNodeSelect={handleNodeSelect}
+                selectedNode={selectedNode}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="text-gray-400 mb-4">
+                    <Bot className="mx-auto h-12 w-12" />
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Flow Selected</h3>
+                  <p className="text-gray-500 mb-4">Select a flow from the sidebar to start editing</p>
+                  <button
+                    onClick={() => setShowCreateFlow(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    <div className={`bg-white border-2 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow min-w-[120px] ${
-                      draggedNode === node.id 
-                        ? 'border-blue-500 shadow-lg' 
-                        : 'border-gray-200'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className={`p-1 rounded ${getNodeColor(node.type)}`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <button
-                          onClick={() => handleDeleteNode(node.id)}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                      <h4 className="text-sm font-medium text-gray-900">{node.config.name}</h4>
-                      <p className="text-xs text-gray-500 capitalize">{node.type}</p>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Drop zone indicator */}
-              {draggedItem && (
-                <div className="absolute inset-0 border-2 border-dashed border-blue-300 bg-blue-50 bg-opacity-50 flex items-center justify-center">
-                  <div className="text-blue-600 font-medium">
-                    Drop {draggedItem.name} here
-                  </div>
+                    Create New Flow
+                  </button>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="text-gray-400 mb-4">
-                  <Bot className="mx-auto h-12 w-12" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Flow Selected</h3>
-                <p className="text-gray-500 mb-4">Select a flow from the sidebar to start editing</p>
-                <button
-                  onClick={() => setShowCreateFlow(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Create New Flow
-                </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Enhanced Properties Panel */}
+          <div className="w-80 bg-white border-l border-gray-200">
+            <EnhancedPropertiesPanel
+              selectedNode={selectedNode}
+              connections={connections}
+              onNodeUpdate={handleNodeUpdate}
+              onNodeDelete={handleNodeDelete}
+              onNodeDuplicate={handleNodeDuplicate}
+              onConnectionDelete={handleConnectionDelete}
+            />
+          </div>
         </div>
       </div>
     </div>
