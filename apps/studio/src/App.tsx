@@ -12,6 +12,8 @@ import PropertiesPanel from './components/PropertiesPanel';
 // Pages
 import Home from './pages/Home';
 import Studio from './pages/Studio';
+import ModernStudio from './pages/ModernStudio';
+import SponsorDemo from './pages/SponsorDemo';
 import Sessions from './pages/Sessions';
 import Agents from './pages/Agents';
 import Compliance from './pages/Compliance';
@@ -66,7 +68,9 @@ const AppContent: React.FC = () => {
         <main className={`flex-1 ${!isStudioPage ? 'p-6' : ''}`}>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/studio" element={<Studio />} />
+            <Route path="/studio" element={<ModernStudio />} />
+            <Route path="/studio-old" element={<Studio />} />
+            <Route path="/sponsor-demo" element={<SponsorDemo />} />
             <Route path="/sessions" element={<Sessions />} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/compliance" element={<Compliance />} />

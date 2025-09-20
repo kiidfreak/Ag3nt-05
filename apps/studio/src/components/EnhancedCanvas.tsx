@@ -87,6 +87,9 @@ const EnhancedCanvas: React.FC<EnhancedCanvasProps> = React.memo(({
   onNodeSelect,
   selectedNode
 }) => {
+  // Debug logging
+  console.log('EnhancedCanvas received nodes:', nodes.length, nodes);
+  console.log('EnhancedCanvas received connections:', connections.length, connections);
   const canvasRef = useRef<HTMLDivElement>(null);
   const [draggedNode, setDraggedNode] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState<Position>({ x: 0, y: 0 });
@@ -768,6 +771,9 @@ const EnhancedCanvas: React.FC<EnhancedCanvasProps> = React.memo(({
     const isSelected = selectedNode?.id === node.id;
     const isDragging = draggedNode === node.id;
 
+    // Debug logging
+    console.log('Rendering node:', node.id, 'at position:', node.position, 'type:', node.type);
+
     return (
       <div
         key={node.id}
@@ -887,6 +893,14 @@ const EnhancedCanvas: React.FC<EnhancedCanvasProps> = React.memo(({
             zIndex: 10
           }}
         >
+          {/* Debug info */}
+          {nodes.length === 0 && (
+            <div className="absolute top-4 left-4 bg-yellow-100 border border-yellow-300 rounded-lg p-4 text-yellow-800">
+              <h3 className="font-semibold">No nodes to display</h3>
+              <p className="text-sm">The canvas is empty. Try adding some nodes from the sidebar or right-click on the canvas.</p>
+            </div>
+          )}
+          
           {/* Nodes - rendered first so they appear behind connections */}
           {nodes.map(renderNode)}
 

@@ -14,6 +14,8 @@ import { executeJusticeFlowExample, createSampleLegalCase } from '../services/ju
 import EnhancedCanvas from '../components/EnhancedCanvas';
 import EnhancedPropertiesPanel from '../components/EnhancedPropertiesPanel';
 import EnhancedSidebar from '../components/EnhancedSidebar';
+import VoicePanel from '../components/VoicePanel';
+import WorkflowGuide from '../components/WorkflowGuide';
 
 interface DragItem {
   type: 'agent' | 'condition' | 'action' | 'input' | 'output';
@@ -66,6 +68,9 @@ const Studio: React.FC = () => {
   const [infrastructureHealth, setInfrastructureHealth] = useState<any>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
+  const [generatedWorkflow, setGeneratedWorkflow] = useState<any>(null);
+  const [showWorkflowGuide, setShowWorkflowGuide] = useState(false);
 
   // Get recent flows (last 3)
   const recentFlows = flows.slice(0, 3).map(flow => ({
@@ -479,6 +484,142 @@ const Studio: React.FC = () => {
         setSelectedFlow(flowsResponse.data[0]);
         const enhancedNodes = flowsResponse.data[0].nodes.map(enhanceNode);
         setNodes(enhancedNodes);
+      } else {
+        // Create a sample flow with initial nodes if no flows exist
+        const sampleFlow = {
+          id: 'sample-flow-1',
+          name: 'Sample Agent Workflow',
+          description: 'A sample workflow to get you started',
+          status: 'draft' as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          config: {
+            version: '1.0.0',
+            triggers: [],
+            steps: [],
+          },
+          nodes: []
+        };
+        
+        setFlows([sampleFlow]);
+        setSelectedFlow(sampleFlow);
+        
+        // Add some sample nodes to get started - positioned in center of viewport
+        const sampleNodes: EnhancedFlowNode[] = [
+          {
+            id: 'node-1',
+            type: 'input',
+            name: 'Data Input',
+            config: { name: 'Data Input' },
+            position: { x: 50, y: 50 },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            flowId: sampleFlow.id,
+            ports: getComponentPorts('input'),
+            status: 'idle'
+          },
+          {
+            id: 'node-2',
+            type: 'agent',
+            name: 'AI Agent',
+            config: { name: 'AI Agent' },
+            position: { x: 250, y: 50 },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            flowId: sampleFlow.id,
+            ports: getComponentPorts('agent'),
+            status: 'idle'
+          },
+          {
+            id: 'node-3',
+            type: 'condition',
+            name: 'Decision Point',
+            config: { name: 'Decision Point' },
+            position: { x: 450, y: 50 },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            flowId: sampleFlow.id,
+            ports: getComponentPorts('condition'),
+            status: 'idle'
+          },
+          {
+            id: 'node-4',
+            type: 'action',
+            name: 'Process Data',
+            config: { name: 'Process Data' },
+            position: { x: 250, y: 200 },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            flowId: sampleFlow.id,
+            ports: getComponentPorts('action'),
+            status: 'idle'
+          },
+          {
+            id: 'node-5',
+            type: 'output',
+            name: 'Result Output',
+            config: { name: 'Result Output' },
+            position: { x: 450, y: 200 },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            flowId: sampleFlow.id,
+            ports: getComponentPorts('output'),
+            status: 'idle'
+          }
+        ];
+        
+        setNodes(sampleNodes);
+        
+        // Center the viewport after a short delay to ensure canvas is rendered
+        setTimeout(() => {
+          const canvasElement = document.querySelector('.react-flow__viewport');
+          if (canvasElement) {
+            // Reset transform to center the view
+            (canvasElement as HTMLElement).style.transform = 'translate(0px, 0px) scale(1)';
+          }
+        }, 100);
+        
+        // Add some sample connections
+        const sampleConnections: Connection[] = [
+          {
+            id: 'conn-1',
+            sourceNodeId: 'node-1',
+            sourcePortId: 'output',
+            targetNodeId: 'node-2',
+            targetPortId: 'input',
+            type: 'data',
+            status: 'connected'
+          },
+          {
+            id: 'conn-2',
+            sourceNodeId: 'node-2',
+            sourcePortId: 'output',
+            targetNodeId: 'node-3',
+            targetPortId: 'input',
+            type: 'data',
+            status: 'connected'
+          },
+          {
+            id: 'conn-3',
+            sourceNodeId: 'node-3',
+            sourcePortId: 'true',
+            targetNodeId: 'node-4',
+            targetPortId: 'input',
+            type: 'data',
+            status: 'connected'
+          },
+          {
+            id: 'conn-4',
+            sourceNodeId: 'node-4',
+            sourcePortId: 'output',
+            targetNodeId: 'node-5',
+            targetPortId: 'input',
+            type: 'data',
+            status: 'connected'
+          }
+        ];
+        
+        setConnections(sampleConnections);
       }
       setError(null);
     } catch (err) {
@@ -920,6 +1061,27 @@ const Studio: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button 
+                onClick={() => setShowVoicePanel(!showVoicePanel)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+              >
+                <Bot className="w-4 h-4" />
+                <span>Voice Assistant</span>
+              </button>
+              <button 
+                onClick={() => {
+                  // Center the viewport
+                  const canvasElement = document.querySelector('.react-flow__viewport');
+                  if (canvasElement) {
+                    (canvasElement as HTMLElement).style.transform = 'translate(0px, 0px) scale(1)';
+                  }
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                title="Center View"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Center</span>
+              </button>
+              <button 
                 onClick={handleRunFlow}
                 disabled={!selectedFlow || nodes.length === 0}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -952,14 +1114,37 @@ const Studio: React.FC = () => {
           {/* Enhanced Canvas */}
           <div className="flex-1">
             {selectedFlow ? (
-              <EnhancedCanvas
-                nodes={nodes}
-                connections={connections}
-                onNodesChange={setNodes}
-                onConnectionsChange={setConnections}
-                onNodeSelect={handleNodeSelect}
-                selectedNode={selectedNode}
-              />
+              <div className="relative h-full">
+                <EnhancedCanvas
+                  nodes={nodes}
+                  connections={connections}
+                  onNodesChange={setNodes}
+                  onConnectionsChange={setConnections}
+                  onNodeSelect={handleNodeSelect}
+                  selectedNode={selectedNode}
+                />
+                
+                {/* Getting Started Guide */}
+                {nodes.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg shadow-lg p-6 max-w-md text-center pointer-events-auto">
+                      <div className="text-blue-500 mb-4">
+                        <Bot className="mx-auto h-12 w-12" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Welcome to Agent Studio!</h3>
+                      <p className="text-gray-600 mb-4">
+                        Start building your agent workflow by dragging components from the sidebar or right-clicking on the canvas.
+                      </p>
+                      <div className="space-y-2 text-sm text-gray-500">
+                        <p>• Drag agents from the sidebar to add them</p>
+                        <p>• Right-click on canvas to add basic nodes</p>
+                        <p>• Connect nodes by clicking on their ports</p>
+                        <p>• Use templates for quick setup</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -992,6 +1177,63 @@ const Studio: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Voice Panel Modal */}
+      {showVoicePanel && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Voice Assistant</h2>
+                <button
+                  onClick={() => setShowVoicePanel(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <VoicePanel
+                onWorkflowGenerated={(workflow) => {
+                  setGeneratedWorkflow(workflow);
+                  setShowWorkflowGuide(true);
+                }}
+                onGuidanceRequested={(guidance) => {
+                  console.log('Guidance requested:', guidance);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Guide Modal */}
+      {showWorkflowGuide && generatedWorkflow && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Workflow Implementation Guide</h2>
+                <button
+                  onClick={() => setShowWorkflowGuide(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              <WorkflowGuide
+                workflow={generatedWorkflow}
+                onStepComplete={(stepId) => {
+                  console.log('Step completed:', stepId);
+                }}
+                onWorkflowComplete={(workflow) => {
+                  console.log('Workflow completed:', workflow);
+                  setShowWorkflowGuide(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
